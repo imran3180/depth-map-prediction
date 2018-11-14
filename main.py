@@ -119,4 +119,4 @@ for epoch in range(1, args.epochs + 1):
     model_file = folder_name + "/" + 'coarse_model_' + str(epoch) + '.pth'
     torch.save(coarse_model.state_dict(), model_file)
     model_file = folder_name + "/" + 'fine_model_' + str(epoch) + '.pth'
-    torch.save(coarse_model.state_dict(), model_file)
+    torch.save(fine_model.state_dict(), model_file)

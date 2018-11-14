@@ -17,6 +17,12 @@ depth_data_transforms = transforms.Compose([
     # transforms.Normalize((0.3337, 0.3064, 0.3171), ( 0.2672, 0.2564, 0.2629)) # Calculate this statistics for the training image.
 ])
 
+input_for_plot_transforms = transforms.Compose([
+    transforms.Resize((55, 74)),    # Different for Input Image & Depth Image
+    transforms.ToTensor(),
+    # transforms.Normalize((0.3337, 0.3064, 0.3171), ( 0.2672, 0.2564, 0.2629)) # Calculate this statistics for the training image.
+])
+
 def initialize_data(folder):
     rgb_images = folder + '/rgb'
     if not os.path.isdir(rgb_images):
