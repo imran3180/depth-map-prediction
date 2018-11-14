@@ -1,0 +1,7 @@
+*~
+data
+models
+*.pyc
+*.pth
+*.csv
+*.DS_Store
