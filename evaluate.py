@@ -9,8 +9,12 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 import torchvision.datasets as datasets
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import ImageGrid
+
 from model import coarseNet, fineNet
 import pdb
+import numpy as np
 
 parser = argparse.ArgumentParser(description='PyTorch GTSRB evaluation script')
 parser.add_argument('model_folder', type=str, metavar='F',
@@ -43,6 +47,18 @@ test_rgb_loader = torch.utils.data.DataLoader(datasets.ImageFolder(args.data + '
 test_depth_loader = torch.utils.data.DataLoader(datasets.ImageFolder(args.data + '/test_images/depth/', transform = depth_data_transforms), batch_size=args.batch_size, shuffle=False, num_workers=1)
 input_for_plot_loader = torch.utils.data.DataLoader(datasets.ImageFolder(args.data + '/test_images/rgb/', transform = input_for_plot_transforms), batch_size=args.batch_size, shuffle=False, num_workers=1)
 
+def plot_grid(fig, plot_input, coarse_output, fine_output, actual_output):
+	grid = ImageGrid(fig, 141, nrows_ncols=(8, 4), axes_pad=0.05, label_mode="1")
+	for i in range(8):
+		for j in range(4):
+			if(j == 0):
+				grid[i*4+j].imshow(np.transpose(plot_input[i], (1, 2, 0)), interpolation="nearest")
+			if(j == 1):
+				grid[i*4+j].imshow(np.transpose(coarse_output[i][0].detach().numpy(), (0, 1)), interpolation="nearest")
+			if(j == 2):
+				grid[i*4+j].imshow(np.transpose(fine_output[i][0].detach().numpy(), (0, 1)), interpolation="nearest")
+			if(j == 3):
+				grid[i*4+j].imshow(np.transpose(actual_output[i][0].detach().numpy(), (0, 1)), interpolation="nearest")
 
 batch_idx = 0
 for(rgb, depth, plot_input) in zip(test_rgb_loader, test_depth_loader, input_for_plot_loader):
@@ -51,4 +67,8 @@ for(rgb, depth, plot_input) in zip(test_rgb_loader, test_depth_loader, input_for
     fine_output = fine_model(rgb, coarse_output)
     actual_output = depth[:,0,:,:].view(args.batch_size, 1, output_height, output_width)
     batch_idx = batch_idx + 1
+    F = plt.figure(1, (30, 60))
+    F.subplots_adjust(left=0.05, right=0.95)
+    plot_grid(F, plot_input, coarse_output, fine_output, actual_output)
+    plt.show()
     if batch_idx == 1: break
