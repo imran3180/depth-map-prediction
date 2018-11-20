@@ -32,7 +32,7 @@ def initialize_data(folder):
     if not os.path.isdir(depth_images):
         raise(RuntimeError("Could not found {}/depth folder".format(folder)))
 
-    # Total Image - 1449 (Division: Trainging - 1024, Validation - 256, Testing - 169)
+    # Total Image - 1449 (Division: Train-ing - 1024, Validation - 256, Testing - 169)
     dataset_prepared = True
 
     train_folder = folder + '/train_images'

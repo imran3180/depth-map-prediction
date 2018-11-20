@@ -6,11 +6,12 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
+from logger import Logger
 import pdb
 import os
 
 # Training settings
-parser = argparse.ArgumentParser(description='PyTorch GTSRB example')
+parser = argparse.ArgumentParser(description='PyTorch depth map prediction example')
 parser.add_argument('model_folder', type=str, metavar='F',
                     help='In which folder do you want to save the model')
 parser.add_argument('--data', type=str, default='data', metavar='D',
@@ -25,8 +26,10 @@ parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                     help='SGD momentum (default: 0.5)')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
-parser.add_argument('--log-interval', type=int, default=1, metavar='N',
+parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
+parser.add_argument('--suffix', type=str, default='', metavar='D',
+                    help='suffix for the filename of models and output files')
 args = parser.parse_args()
 
 torch.manual_seed(args.seed)
@@ -45,23 +48,31 @@ val_depth_loader = torch.utils.data.DataLoader(datasets.ImageFolder(args.data + 
 
 from model import coarseNet, fineNet
 coarse_model = coarseNet()
+coarse_model.cuda()
 fine_model = fineNet()
+fine_model.cuda()
 loss_function = nn.MSELoss()
 
 coarse_optimizer = optim.SGD(coarse_model.parameters(), lr=args.lr, momentum=args.momentum)
 fine_optimizer = optim.SGD(fine_model.parameters(), lr=args.lr, momentum=args.momentum)
 
+dtype=torch.cuda.FloatTensor
+logger = Logger('./logs/' + log_file_name)
+
 def train_coarse(epoch):
     coarse_model.train()
     batch_idx = 0
     for (rgb, depth) in zip(train_rgb_loader, train_depth_loader):
-        rgb, depth = Variable(rgb[0]), Variable(depth[0])
+        rgb, depth = Variable(rgb[0].cuda()), Variable(depth[0].cuda())
         coarse_optimizer.zero_grad()
-        output = coarse_model(rgb)
+        output = coarse_model(rgb.type(dtype))
         loss = loss_function(output, depth[:,0,:,:].view(args.batch_size, 1, output_height, output_width))
         loss.backward()
         coarse_optimizer.step()
         if batch_idx % args.log_interval == 0:
+            training_tag = "coarse training loss epoch:" + str(epoch)
+            logger.scalar_summary(training_tag, loss.item(), batch_idx)
+
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(rgb), len(train_rgb_loader.dataset),
                 100. * batch_idx / len(train_rgb_loader), loss.item()))
@@ -72,14 +83,17 @@ def train_fine(epoch):
     fine_model.train()
     batch_idx = 0
     for (rgb, depth) in zip(train_rgb_loader, train_depth_loader):
-        rgb, depth = Variable(rgb[0]), Variable(depth[0])
+        rgb, depth = Variable(rgb[0].cuda()), Variable(depth[0].cuda())
         fine_optimizer.zero_grad()
-        coarse_output = coarse_model(rgb)   # it should print last epoch error since coarse is fixed.
-        output = fine_model(rgb, coarse_output)
+        coarse_output = coarse_model(rgb.type(dtype))   # it should print last epoch error since coarse is fixed.
+        output = fine_model(rgb.type(dtype), coarse_output.type(dtype))
         loss = loss_function(output, depth[:,0,:,:].view(args.batch_size, 1, output_height, output_width))
         loss.backward()
         fine_optimizer.step()
         if batch_idx % args.log_interval == 0:
+            training_tag = "fine training loss epoch:" + str(epoch)
+            logger.scalar_summary(training_tag, loss.item(), batch_idx)
+
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(rgb), len(train_rgb_loader.dataset),
                 100. * batch_idx / len(train_rgb_loader), loss.item()))
@@ -93,18 +107,20 @@ def validation():
     fine_validation_loss = 0
     batch_idx = 0
     for(rgb, depth) in zip(train_rgb_loader, train_depth_loader):
-        rgb, depth = Variable(rgb[0], requires_grad = False), Variable(depth[0], requires_grad = False)
-        coarse_output = coarse_model(rgb)
+        rgb, depth = Variable(rgb[0].cuda(), requires_grad = False), Variable(depth[0].cuda(), requires_grad = False)
+        coarse_output = coarse_model(rgb.type(dtype))
         coarse_validation_loss += loss_function(coarse_output, depth[:,0,:,:].view(args.batch_size, 1, output_height, output_width)).item()
-        fine_output = fine_model(rgb, coarse_output)
+        fine_output = fine_model(rgb.type(dtype), coarse_output)
         fine_validation_loss += loss_function(fine_output, depth[:,0,:,:].view(args.batch_size, 1, output_height, output_width)).item()
         batch_idx = batch_idx + 1
         if batch_idx == 2: break
     coarse_validation_loss /= batch_idx
     fine_validation_loss /= batch_idx
+    logger.scalar_summary("coarse validation loss", coarse_validation_loss, epoch)
+    logger.scalar_summary("coarse validation loss", fine_validation_loss, epoch)
+    logger.scalar_summary("accuracy", 100. * correct / len(val_loader.dataset), epoch)
     print('\nValidation set: Average loss(Coarse): {:.4f}, Average loss(Fine): {:.4f} \n'.format(
         coarse_validation_loss, fine_validation_loss))
-
 
 
 for epoch in range(1, args.epochs + 1):

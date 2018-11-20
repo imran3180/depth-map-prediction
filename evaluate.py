@@ -16,9 +16,9 @@ from model import coarseNet, fineNet
 import pdb
 import numpy as np
 
-parser = argparse.ArgumentParser(description='PyTorch GTSRB evaluation script')
+parser = argparse.ArgumentParser(description='PyTorch depth prediction evaluation script')
 parser.add_argument('model_folder', type=str, metavar='F',
-                    help='In which folder do you want to save the model')
+                    help='In which folder have you saved the model')
 parser.add_argument('--data', type=str, default='data', metavar='D',
                     help="folder where data is located. train_data.zip and test_data.zip need to be found in the folder")
 parser.add_argument('--model_no', type=int, default = 1, metavar='N',
