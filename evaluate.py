@@ -68,7 +68,8 @@ def plot_grid(fig, plot_input, coarse_output, fine_output, actual_output, row_no
 batch_idx = 0
 for batch_idx,(rgb, depth, plot_input) in enumerate(zip(test_rgb_loader, test_depth_loader, input_for_plot_loader)):
     rgb, depth, plot_input = Variable(rgb[0].cuda(), requires_grad = False), Variable(depth[0].cuda(), requires_grad = False), Variable(plot_input[0].cuda(), requires_grad = False)
-    print('rgb size:{} depth size:{}'.format(rgb.size(), depth.size()))
+    #print('rgb size:{} depth size:{}'.format(rgb.size(), depth.size()))
+    print('evaluating batch:' + str(batch_idx))
     coarse_output = coarse_model(rgb)
     fine_output = fine_model(rgb.type(dtype), coarse_output)
     depth_dim = list(depth.size())
@@ -76,7 +77,7 @@ for batch_idx,(rgb, depth, plot_input) in enumerate(zip(test_rgb_loader, test_de
     F = plt.figure(1, (30, 60))
     F.subplots_adjust(left=0.05, right=0.95)
     plot_grid(F, plot_input, coarse_output, fine_output, actual_output, depth_dim[0])
-    plt.savefig("plots/" + args.model_folder + "_" + str(args.model_no) + "_" + str(batch_idx) + ".pdf")
+    plt.savefig("plots/" + args.model_folder + "_" + str(args.model_no) + "_" + str(batch_idx) + ".jpg")
     plt.show()
     #batch_idx = batch_idx + 1
     #if batch_idx == 1: break

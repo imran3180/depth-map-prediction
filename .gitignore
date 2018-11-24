@@ -1,6 +1,8 @@
 *~
 data
 models
+plots
+logs
 *.pyc
 *.pth
 *.csv
