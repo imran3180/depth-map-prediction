@@ -16,7 +16,7 @@ parser.add_argument('model_folder', type=str, metavar='F',
                     help='In which folder do you want to save the model')
 parser.add_argument('--data', type=str, default='data', metavar='D',
                     help="folder where data is located. train_data.zip and test_data.zip need to be found in the folder")
-parser.add_argument('--batch-size', type = int, default = 8, metavar = 'N',
+parser.add_argument('--batch-size', type = int, default = 32, metavar = 'N',
                     help='input batch size for training (default: 8)')
 parser.add_argument('--epochs', type=int, default = 10, metavar='N',
                     help='number of epochs to train (default: 10)')
@@ -53,8 +53,25 @@ fine_model = fineNet()
 fine_model.cuda()
 loss_function = nn.MSELoss()
 
-coarse_optimizer = optim.SGD(coarse_model.parameters(), lr=args.lr, momentum=args.momentum)
-fine_optimizer = optim.SGD(fine_model.parameters(), lr=args.lr, momentum=args.momentum)
+# coarse_optimizer = optim.SGD(coarse_model.parameters(), lr=args.lr, momentum=args.momentum)
+# fine_optimizer = optim.SGD(fine_model.parameters(), lr=args.lr, momentum=args.momentum)
+
+coarse_optimizer = optim.SGD([
+                        {'params': coarse_model.conv1.parameters(), 'lr': 0.001},
+                        {'params': coarse_model.conv2.parameters(), 'lr': 0.001},
+                        {'params': coarse_model.conv3.parameters(), 'lr': 0.001},
+                        {'params': coarse_model.conv4.parameters(), 'lr': 0.001},
+                        {'params': coarse_model.conv5.parameters(), 'lr': 0.001},
+                        {'params': coarse_model.fc1.parameters(), 'lr': 0.1},
+                        {'params': coarse_model.fc2.parameters(), 'lr': 0.1}
+                    ], lr = 0.001, momentum = 0.9)
+
+fine_optimizer = optim.SGD([
+                        {'params': coarse_model.conv1.parameters(), 'lr': 0.001},
+                        {'params': coarse_model.conv2.parameters(), 'lr': 0.01},
+                        {'params': coarse_model.conv3.parameters(), 'lr': 0.001}
+                    ], lr = 0.001, momentum = 0.9)
+
 
 dtype=torch.cuda.FloatTensor
 logger = Logger('./logs/' + args.model_folder)
