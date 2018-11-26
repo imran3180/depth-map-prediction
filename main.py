@@ -35,13 +35,13 @@ output_height = 55
 output_width = 74
 
 ### Data Initialization and Loading
-from data import initialize_data, rgb_data_transforms, depth_data_transforms # data.py in the same folder
-initialize_data(args.data) # extracts the zip files, makes a validation set
+from data import rgb_data_transforms, depth_data_transforms, RGBDataset, DepthDataset # data.py in the same folder
+# initialize_data(args.data) # extracts the zip files, makes a validation set
 
-train_rgb_loader = torch.utils.data.DataLoader(datasets.ImageFolder(args.data + '/train_images/rgb/', transform = rgb_data_transforms), batch_size=args.batch_size, shuffle=True, num_workers=1)
-train_depth_loader = torch.utils.data.DataLoader(datasets.ImageFolder(args.data + '/train_images/depth/', transform = depth_data_transforms), batch_size=args.batch_size, shuffle=True, num_workers=1)
-val_rgb_loader = torch.utils.data.DataLoader(datasets.ImageFolder(args.data + '/val_images/rgb/', transform = rgb_data_transforms), batch_size=args.batch_size, shuffle=False, num_workers=1)
-val_depth_loader = torch.utils.data.DataLoader(datasets.ImageFolder(args.data + '/val_images/depth/', transform = depth_data_transforms), batch_size=args.batch_size, shuffle=False, num_workers=1)
+train_rgb_loader = torch.utils.data.DataLoader(RGBDataset('nyu_depth_v2_labeled.mat', 'training', transform = rgb_data_transforms), batch_size=args.batch_size, shuffle=True, num_workers=1)
+train_depth_loader = torch.utils.data.DataLoader(DepthDataset('nyu_depth_v2_labeled.mat', 'training', transform = depth_data_transforms), batch_size=args.batch_size, shuffle=True, num_workers=1)
+val_rgb_loader = torch.utils.data.DataLoader(RGBDataset('nyu_depth_v2_labeled.mat', 'validation', transform = rgb_data_transforms), batch_size=args.batch_size, shuffle=False, num_workers=1)
+val_depth_loader = torch.utils.data.DataLoader(DepthDataset('nyu_depth_v2_labeled.mat', 'validation', transform = depth_data_transforms), batch_size=args.batch_size, shuffle=False, num_workers=1)
 
 from model import coarseNet, fineNet
 coarse_model = coarseNet()
@@ -55,6 +55,7 @@ def train_coarse(epoch):
     coarse_model.train()
     batch_idx = 0
     for (rgb, depth) in zip(train_rgb_loader, train_depth_loader):
+        pdb.set_trace()
         rgb, depth = Variable(rgb[0]), Variable(depth[0])
         coarse_optimizer.zero_grad()
         output = coarse_model(rgb)

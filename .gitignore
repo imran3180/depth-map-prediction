@@ -1,6 +1,9 @@
 *~
 data
 models
+data2/
+plots/
+nyu_depth_v2_labeled.mat
 *.pyc
 *.pth
 *.csv
