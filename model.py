@@ -17,8 +17,8 @@ class coarseNet(nn.Module):
         self.fc2 = nn.Linear(4096, 4070)
         self.pool = nn.MaxPool2d(2)
         self.dropout = nn.Dropout2d()
-        # if init_weights:
-        #     self._initialize_weights()
+        if init_weights:
+            self._initialize_weights()
 
 
     def forward(self, x):
@@ -63,8 +63,8 @@ class fineNet(nn.Module):
         self.conv2 = nn.Conv2d(64, 64, kernel_size = 5, padding = 2)
         self.conv3 = nn.Conv2d(64, 1, kernel_size = 5, padding = 2)
         self.pool = nn.MaxPool2d(2)
-        # if init_weights:
-        #     self._initialize_weights()
+        if init_weights:
+            self._initialize_weights()
 
 
     def forward(self, x, y):

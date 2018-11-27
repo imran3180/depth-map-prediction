@@ -76,6 +76,20 @@ fine_optimizer = optim.SGD([
 dtype=torch.cuda.FloatTensor
 logger = Logger('./logs/' + args.model_folder)
 
+def custom_loss_function(output, target):
+    epsilon = 0.0001
+    # output = output + epsilon
+    # target = target + epsilon
+    # di = torch.log(target) - torch.log(output)
+    di = target - output
+    n = (output_height * output_width)
+    di2 = torch.pow(di, 2)
+    fisrt_term = torch.sum(di2,(1,2,3))/n
+    second_term = 0.5*torch.pow(torch.sum(di,(1,2,3)), 2)/ (n**2)
+    loss = fisrt_term - second_term
+    # pdb.set_trace()
+    return loss.sum()
+
 def train_coarse(epoch):
     coarse_model.train()
     for batch_idx, (rgb, depth) in enumerate(zip(train_rgb_loader, train_depth_loader)):
@@ -84,7 +98,9 @@ def train_coarse(epoch):
         coarse_optimizer.zero_grad()
         output = coarse_model(rgb.type(dtype))
         #output = coarse_model(rgb)
-        loss = loss_function(output, depth[:,0,:,:].view(args.batch_size, 1, output_height, output_width))
+        target = depth[:,0,:,:].view(args.batch_size, 1, output_height, output_width)
+        # loss = loss_function(output, depth[:,0,:,:].view(args.batch_size, 1, output_height, output_width))
+        loss = custom_loss_function(output, target)
         loss.backward()
         coarse_optimizer.step()
         if batch_idx % args.log_interval == 0:
@@ -108,7 +124,10 @@ def train_fine(epoch):
         #output = fine_model(rgb, coarse_output)
         coarse_output = coarse_model(rgb.type(dtype))   # it should print last epoch error since coarse is fixed.
         output = fine_model(rgb.type(dtype), coarse_output.type(dtype))
-        loss = loss_function(output, depth[:,0,:,:].view(args.batch_size, 1, output_height, output_width))
+        target = depth[:,0,:,:].view(args.batch_size, 1, output_height, output_width)
+        # loss = loss_function(output, depth[:,0,:,:].view(args.batch_size, 1, output_height, output_width))
+        # pdb.set_trace()
+        loss = custom_loss_function(output, target)
         loss.backward()
         fine_optimizer.step()
         if batch_idx % args.log_interval == 0:
