@@ -14,10 +14,9 @@ class TransposeDepthInput(object):
     def __call__(self, depth):
         depth = depth.transpose((2, 0, 1))
         depth = torch.from_numpy(depth)
-        pdb.set_trace()
-        pool = nn.AvgPool2d(2, padding = -1)
-        depth = pool(depth)
-        depth = pool(depth)
+        depth = depth.view(1, depth.shape[0], depth.shape[1], depth.shape[2])
+        depth = nn.functional.interpolate(depth, size=(55, 74), mode='bilinear', align_corners=False)
+        depth = torch.log(depth[0])
         return depth
 
 rgb_data_transforms = transforms.Compose([
@@ -29,11 +28,16 @@ depth_data_transforms = transforms.Compose([
     TransposeDepthInput(),
 ])
 
+input_for_plot_transforms = transforms.Compose([
+    transforms.Resize((55, 74)),    # Different for Input Image & Depth Image
+    transforms.ToTensor(),
+])
+
 class RGBDataset(Dataset):
     def __init__(self, filename, type, transform = None):
         f = h5py.File(filename, 'r')
         if type == "training":
-            self.images = f['images'][:16]
+            self.images = f['images'][:1024]
         elif type == "validation":
             self.images = f['images'][1024:1248]
         elif type == "test":
@@ -56,7 +60,7 @@ class DepthDataset(Dataset):
     def __init__(self, filename, type, transform = None):
         f = h5py.File(filename, 'r')
         if type == "training":
-            self.depths = f['depths'][:128]
+            self.depths = f['depths'][:1024]
         elif type == "validation":
             self.depths = f['depths'][1024:1248]
         elif type == "test":
@@ -74,8 +78,8 @@ class DepthDataset(Dataset):
             depth = self.transform(depth)
         return depth
 
-obj = DepthDataset('nyu_depth_v2_labeled.mat', 'training', transform = depth_data_transforms)
-obj[0]
+# obj = DepthDataset('nyu_depth_v2_labeled.mat', 'training', transform = depth_data_transforms)
+# obj[0]
 
 # class TransposeRGBInput(object):
 #     def __call__(self, image):
