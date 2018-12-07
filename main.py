@@ -48,6 +48,7 @@ val_depth_loader = torch.utils.data.DataLoader(DepthDataset('nyu_depth_v2_labele
 
 from model import coarseNet, fineNet
 coarse_model = coarseNet()
+coarse_model.cuda()
 fine_model = fineNet()
 # loss_function = nn.MSELoss()
 
@@ -69,7 +70,6 @@ fine_optimizer = optim.SGD([
                         {'params': coarse_model.conv2.parameters(), 'lr': 0.01},
                         {'params': coarse_model.conv3.parameters(), 'lr': 0.001}
                     ], lr = 0.001, momentum = 0.9)
-
 
 
 logger = Logger('./logs/' + args.model_folder)
@@ -109,7 +109,6 @@ def train_coarse(epoch):
                 epoch, batch_idx * len(rgb), len(train_rgb_loader.dataset),
                 100. * batch_idx / len(train_rgb_loader), loss.item()))
         #batch_idx = batch_idx + 1
-        if batch_idx == 2: break
 
 def train_fine(epoch):
     coarse_model.eval()
@@ -136,7 +135,6 @@ def train_fine(epoch):
                 epoch, batch_idx * len(rgb), len(train_rgb_loader.dataset),
                 100. * batch_idx / len(train_rgb_loader), loss.item()))
         #batch_idx = batch_idx + 1
-        if batch_idx == 2: break
 
 def coarse_validation():
     coarse_model.eval()
