@@ -36,21 +36,29 @@ coarse_state_dict = torch.load("models/" + args.model_folder + "/coarse_model_" 
 fine_state_dict = torch.load("models/" + args.model_folder + "/fine_model_" + str(args.model_no) + ".pth")
 
 coarse_model = coarseNet()
-coarse_model.cuda()
 fine_model = fineNet()
-fine_model.cuda()
 
-dtype=torch.cuda.FloatTensor
 
 coarse_model.load_state_dict(coarse_state_dict)
 fine_model.load_state_dict(fine_state_dict)
 coarse_model.eval()
 fine_model.eval()
 
-from data import rgb_data_transforms, depth_data_transforms, input_for_plot_transforms, RGBDataset, DepthDataset # data.py in the same folde
-test_rgb_loader = torch.utils.data.DataLoader(RGBDataset('nyu_depth_v2_labeled.mat', 'test', transform = rgb_data_transforms), batch_size=args.batch_size, shuffle=False, num_workers=1)
-test_depth_loader = torch.utils.data.DataLoader(DepthDataset('nyu_depth_v2_labeled.mat', 'test', transform = depth_data_transforms), batch_size=args.batch_size, shuffle=False, num_workers=1)
-input_for_plot_loader = torch.utils.data.DataLoader(RGBDataset('nyu_depth_v2_labeled.mat', 'test', transform = input_for_plot_transforms), batch_size=args.batch_size, shuffle=False, num_workers=1)
+from data import NYUDataset, input_for_plot_transforms, rgb_data_transforms, depth_data_transforms
+
+test_loader = torch.utils.data.DataLoader(NYUDataset( 'nyu_depth_v2_labeled.mat', 
+                                                       'test', 
+                                                        rgb_transform = rgb_data_transforms, 
+                                                        depth_transform = depth_data_transforms), 
+                                            batch_size = args.batch_size, 
+                                            shuffle = False, num_workers = 0)
+
+input_for_plot_loader = torch.utils.data.DataLoader(NYUDataset( 'nyu_depth_v2_labeled.mat', 
+                                                                'test', 
+                                                                rgb_transform = input_for_plot_transforms, 
+                                                                depth_transform = depth_data_transforms), 
+                                                    batch_size = args.batch_size, 
+                                                    shuffle = False, num_workers = 0)
 
 def plot_grid(fig, plot_input, coarse_output, fine_output, actual_output, row_no):
     grid = ImageGrid(fig, 141, nrows_ncols=(row_no, 4), axes_pad=0.05, label_mode="1")
@@ -66,18 +74,18 @@ def plot_grid(fig, plot_input, coarse_output, fine_output, actual_output, row_no
                 grid[i*4+j].imshow(np.transpose(actual_output[i][0].detach().cpu().numpy(), (0, 1)), interpolation="nearest")
 
 batch_idx = 0
-for batch_idx,(rgb, depth, plot_input) in enumerate(zip(test_rgb_loader, test_depth_loader, input_for_plot_loader)):
-    rgb, depth, plot_input = Variable(rgb.cuda(), requires_grad = False), Variable(depth.cuda(), requires_grad = False), Variable(plot_input.cuda(), requires_grad = False)
-    #print('rgb size:{} depth size:{}'.format(rgb.size(), depth.size()))
+for batch_idx,(data, plot_data) in enumerate(zip(test_loader, input_for_plot_loader)):
+    rgb, depth = torch.tensor(data['image'], requires_grad = False), torch.tensor(data['depth'], requires_grad = False)
+    plot_input, actual_output = torch.tensor(plot_data['image'], requires_grad = False), torch.tensor(plot_data['depth'], requires_grad = False)
+
     print('evaluating batch:' + str(batch_idx))
     coarse_output = coarse_model(rgb)
-    fine_output = fine_model(rgb.type(dtype), coarse_output)
+    fine_output = fine_model(rgb, coarse_output)
     depth_dim = list(depth.size())
-    actual_output = depth[:,0,:,:].view(depth_dim[0], 1, output_height, output_width)
     F = plt.figure(1, (30, 60))
     F.subplots_adjust(left=0.05, right=0.95)
     plot_grid(F, plot_input, coarse_output, fine_output, actual_output, depth_dim[0])
-    plt.savefig("plots/" + args.model_folder + "_" + str(args.model_no) + "_" + str(batch_idx) + ".jpg")
+    plt.savefig("new_plots/" + args.model_folder + "_" + str(args.model_no) + "_" + str(batch_idx) + ".jpg")
     plt.show()
     #batch_idx = batch_idx + 1
-    #if batch_idx == 1: break
+    if batch_idx == 1: break
