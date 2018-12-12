@@ -44,29 +44,29 @@ torch.manual_seed(args.seed)    # setting seed for random number generation
 output_height = 55 
 output_width = 74
 
-from data import NYUDataset, rgb_data_transforms, depth_data_transforms
+from data import NYUDataset, rgb_data_transforms, depth_data_transforms, just_tensor_transform
 from image_helper import plot_grid
 
 train_loader = torch.utils.data.DataLoader(NYUDataset( 'nyu_depth_v2_labeled.mat', 
                                                        'training', 
-                                                        rgb_transform = rgb_data_transforms, 
+                                                        rgb_transform = just_tensor_transform, 
                                                         depth_transform = depth_data_transforms), 
                                             batch_size = args.batch_size, 
-                                            shuffle = True, num_workers = 0)
+                                            shuffle = True, num_workers = 2)
 
 val_loader = torch.utils.data.DataLoader(NYUDataset( 'nyu_depth_v2_labeled.mat',
                                                        'validation', 
                                                         rgb_transform = rgb_data_transforms, 
                                                         depth_transform = depth_data_transforms), 
                                             batch_size = args.batch_size, 
-                                            shuffle = False, num_workers = 0)
+                                            shuffle = False, num_workers = 2)
 
 test_loader = torch.utils.data.DataLoader(NYUDataset( 'nyu_depth_v2_labeled.mat',
                                                        'test', 
                                                         rgb_transform = rgb_data_transforms, 
                                                         depth_transform = depth_data_transforms), 
                                             batch_size = args.batch_size, 
-                                            shuffle = False, num_workers = 0)
+                                            shuffle = False, num_workers = 2)
 
 from model import coarseNet, fineNet
 coarse_model = coarseNet()
@@ -294,8 +294,8 @@ for epoch in range(1, args.epochs + 1):
     training_loss = train_coarse(epoch)
     coarse_validation(epoch, training_loss)
     model_file = folder_name + "/" + 'coarse_model_' + str(epoch) + '.pth'
-    if(epoch%10 == 0):
-        torch.save(coarse_model.state_dict(), model_file)
+    # if(epoch%10 == 0):
+    #     torch.save(coarse_model.state_dict(), model_file)
 
 coarse_model.eval() # stoping the coarse model to train.
 
@@ -307,5 +307,5 @@ for epoch in range(1, args.epochs + 1):
     training_loss = train_fine(epoch)
     fine_validation(epoch, training_loss)
     model_file = folder_name + "/" + 'fine_model_' + str(epoch) + '.pth'
-    if(epoch%10 == 0):
-        torch.save(fine_model.state_dict(), model_file)
+    # if(epoch%10 == 0):
+    #     torch.save(fine_model.state_dict(), model_file)
