@@ -77,11 +77,11 @@ class NYUDataset(Dataset):
 
     def __getitem__(self, idx):
         image = self.images[idx]
-        # image = (image - self.mean_image)/np.std(image)
+        image = (image - self.mean_image)/np.std(image)
         image = image.transpose((2, 1, 0))
-        # image = (image - image.min())/(image.max() - image.min())
-        # image = image * 255
-        # image = image.astype('uint8')
+        image = (image - image.min())/(image.max() - image.min())
+        image = image * 255
+        image = image.astype('uint8')
         image = Image.fromarray(image)
         if self.rgb_transform:
             image = self.rgb_transform(image)
