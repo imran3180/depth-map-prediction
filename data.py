@@ -17,7 +17,7 @@ class TransposeDepthInput(object):
         depth = torch.from_numpy(depth)
         depth = depth.view(1, depth.shape[0], depth.shape[1], depth.shape[2])
         depth = nn.functional.interpolate(depth, size = (55, 74), mode='bilinear', align_corners=False)
-        depth = torch.log(depth)
+        # depth = torch.log(depth)
         # depth = (depth - depth.min())/(depth.max() - depth.min())
         return depth[0]
 

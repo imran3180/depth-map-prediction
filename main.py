@@ -109,7 +109,7 @@ logger = Logger('./logs/' + args.model_folder)
 
 def custom_loss_function(output, target):
     # di = output - target
-    di = target - output
+    di = torch.log(target) - torch.log(output)
     n = (output_height * output_width)
     di2 = torch.pow(di, 2)
     fisrt_term = torch.sum(di2,(1,2,3))/n
@@ -138,10 +138,10 @@ def scale_invariant(output, target):
 
 # All Error Function
 def threeshold_percentage(output, target, threeshold_val):
-    d1 = torch.exp(output)/torch.exp(target)
-    d2 = torch.exp(target)/torch.exp(output)
-    # d1 = output/target
-    # d2 = target/output
+    # d1 = torch.exp(output)/torch.exp(target)
+    # d2 = torch.exp(target)/torch.exp(output)
+    d1 = output/target
+    d2 = target/output
     max_d1_d2 = torch.max(d1,d2)
     zero = torch.zeros(output.shape[0], output.shape[1], output.shape[2], output.shape[3])
     one = torch.ones(output.shape[0], output.shape[1], output.shape[2], output.shape[3])
@@ -151,10 +151,10 @@ def threeshold_percentage(output, target, threeshold_val):
     return threeshold_mat.mean()
 
 def rmse_linear(output, target):
-    actual_output = torch.exp(output)
-    actual_target = torch.exp(target)
-    # actual_output = output
-    # actual_target = target
+    # actual_output = torch.exp(output)
+    # actual_target = torch.exp(target)
+    actual_output = output
+    actual_target = target
     diff = actual_output - actual_target
     diff2 = torch.pow(diff, 2)
     mse = torch.sum(diff2, (1,2,3))/(output.shape[2] * output.shape[3])
@@ -162,27 +162,27 @@ def rmse_linear(output, target):
     return rmse.mean()
 
 def rmse_log(output, target):
-    diff = output - target
-    # diff = torch.log(output) - torch.log(target)
+    # diff = output - target
+    diff = torch.log(output) - torch.log(target)
     diff2 = torch.pow(diff, 2)
     mse = torch.sum(diff2, (1,2,3))/(output.shape[2] * output.shape[3])
     rmse = torch.sqrt(mse)
     return mse.mean()
 
 def abs_relative_difference(output, target):
-    actual_output = torch.exp(output)
-    actual_target = torch.exp(target)
-    # actual_output = output
-    # actual_target = target
+    # actual_output = torch.exp(output)
+    # actual_target = torch.exp(target)
+    actual_output = output
+    actual_target = target
     abs_relative_diff = torch.abs(actual_output - actual_target)/actual_target
     abs_relative_diff = torch.sum(abs_relative_diff, (1,2,3))/(output.shape[2] * output.shape[3])
     return abs_relative_diff.mean()
 
 def squared_relative_difference(output, target):
-    actual_output = torch.exp(output)
-    actual_target = torch.exp(target)
-    # actual_output = output
-    # actual_target = target
+    # actual_output = torch.exp(output)
+    # actual_target = torch.exp(target)
+    actual_output = output
+    actual_target = target
     square_relative_diff = torch.pow(torch.abs(actual_output - actual_target), 2)/actual_target
     square_relative_diff = torch.sum(square_relative_diff, (1,2,3))/(output.shape[2] * output.shape[3])
     return square_relative_diff.mean()    
