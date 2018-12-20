@@ -109,7 +109,7 @@ logger = Logger('./logs/' + args.model_folder)
 
 def custom_loss_function(output, target):
     # di = output - target
-    di = torch.log(target) - torch.log(output)
+    di = target - output
     n = (output_height * output_width)
     di2 = torch.pow(di, 2)
     fisrt_term = torch.sum(di2,(1,2,3))/n
