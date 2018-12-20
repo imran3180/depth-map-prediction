@@ -44,29 +44,29 @@ torch.manual_seed(args.seed)    # setting seed for random number generation
 output_height = 55 
 output_width = 74
 
-from data import NYUDataset, rgb_data_transforms, depth_data_transforms, just_tensor_transform
+from data import NYUDataset, rgb_data_transforms, depth_data_transforms
 from image_helper import plot_grid
 
 train_loader = torch.utils.data.DataLoader(NYUDataset( 'nyu_depth_v2_labeled.mat', 
                                                        'training', 
-                                                        rgb_transform = just_tensor_transform, 
+                                                        rgb_transform = rgb_data_transforms, 
                                                         depth_transform = depth_data_transforms), 
                                             batch_size = args.batch_size, 
-                                            shuffle = True, num_workers = 2)
+                                            shuffle = True, num_workers = 5)
 
 val_loader = torch.utils.data.DataLoader(NYUDataset( 'nyu_depth_v2_labeled.mat',
                                                        'validation', 
                                                         rgb_transform = rgb_data_transforms, 
                                                         depth_transform = depth_data_transforms), 
                                             batch_size = args.batch_size, 
-                                            shuffle = False, num_workers = 2)
+                                            shuffle = False, num_workers = 5)
 
 test_loader = torch.utils.data.DataLoader(NYUDataset( 'nyu_depth_v2_labeled.mat',
                                                        'test', 
                                                         rgb_transform = rgb_data_transforms, 
                                                         depth_transform = depth_data_transforms), 
                                             batch_size = args.batch_size, 
-                                            shuffle = False, num_workers = 2)
+                                            shuffle = False, num_workers = 5)
 
 from model import coarseNet, fineNet
 coarse_model = coarseNet()
@@ -75,8 +75,8 @@ coarse_model.cuda()
 fine_model.cuda()
 
 # Paper values for SGD
-coarse_optimizer = optim.SGD([{'params': coarse_model.conv1.parameters(), 'lr': 0.001},{'params': coarse_model.conv2.parameters(), 'lr': 0.001},{'params': coarse_model.conv3.parameters(), 'lr': 0.001},{'params': coarse_model.conv4.parameters(), 'lr': 0.001},{'params': coarse_model.conv5.parameters(), 'lr': 0.001},{'params': coarse_model.fc1.parameters(), 'lr': 0.1},{'params': coarse_model.fc2.parameters(), 'lr': 0.1}], lr = 0.001, momentum = 0.9)
-fine_optimizer = optim.SGD([{'params': fine_model.conv1.parameters(), 'lr': 0.001},{'params': fine_model.conv2.parameters(), 'lr': 0.01},{'params': fine_model.conv3.parameters(), 'lr': 0.001}], lr = 0.001, momentum = 0.9)
+# coarse_optimizer = optim.SGD([{'params': coarse_model.conv1.parameters(), 'lr': 0.001},{'params': coarse_model.conv2.parameters(), 'lr': 0.001},{'params': coarse_model.conv3.parameters(), 'lr': 0.001},{'params': coarse_model.conv4.parameters(), 'lr': 0.001},{'params': coarse_model.conv5.parameters(), 'lr': 0.001},{'params': coarse_model.fc1.parameters(), 'lr': 0.1},{'params': coarse_model.fc2.parameters(), 'lr': 0.1}], lr = 0.001, momentum = 0.9)
+# fine_optimizer = optim.SGD([{'params': fine_model.conv1.parameters(), 'lr': 0.001},{'params': fine_model.conv2.parameters(), 'lr': 0.01},{'params': fine_model.conv3.parameters(), 'lr': 0.001}], lr = 0.001, momentum = 0.9)
 
 # Changed values
 # coarse_optimizer = optim.SGD([{'params': coarse_model.conv1.parameters(), 'lr': 0.01},{'params': coarse_model.conv2.parameters(), 'lr': 0.01},{'params': coarse_model.conv3.parameters(), 'lr': 0.01},{'params': coarse_model.conv4.parameters(), 'lr': 0.01},{'params': coarse_model.conv5.parameters(), 'lr': 0.01},{'params': coarse_model.fc1.parameters(), 'lr': 0.1},{'params': coarse_model.fc2.parameters(), 'lr': 0.1}], lr = 0.01, momentum = 0.9)
@@ -94,8 +94,8 @@ fine_optimizer = optim.SGD([{'params': fine_model.conv1.parameters(), 'lr': 0.00
 # coarse_optimizer = optim.Adagrad(coarse_model.parameters(), lr=0.01, lr_decay=0, weight_decay=0, initial_accumulator_value=0)
 # fine_optimizer = optim.Adagrad(fine_model.parameters(), lr=0.01, lr_decay=0, weight_decay=0, initial_accumulator_value=0)
 
-# coarse_optimizer = optim.Adam(coarse_model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
-# fine_optimizer = optim.Adam(fine_model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+coarse_optimizer = optim.Adam(coarse_model.parameters(), lr=0.01, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+fine_optimizer = optim.Adam(fine_model.parameters(), lr=0.01, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
 
 # coarse_optimizer = optim.Adamax(coarse_model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
 # fine_optimizer = optim.Adamax(fine_model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
@@ -112,14 +112,25 @@ def custom_loss_function(output, target):
     n = (output_height * output_width)
     di2 = torch.pow(di, 2)
     fisrt_term = torch.sum(di2,(1,2,3))/n
-    second_term = 0.5*torch.pow(torch.sum(di,(1,2,3)), 2)/ (n**2)
+    second_term = 0.4*torch.pow(torch.sum(di,(1,2,3)), 2)/ (n**2)
     loss = fisrt_term - second_term
     return loss.mean()
+
+# def custom_loss_function(output, target):
+#     diff = target - output
+#     alpha = torch.sum(diff, (1,2,3))/(output_height * output_width)
+#     loss_val = 0
+#     for i in range(alpha.shape[0]):
+#        loss_val += torch.sum(torch.pow(((output[i] - target[i]) - alpha[i]), 2))/(2 * output_height * output_width)
+#     loss_val = loss_val/output.shape[0] 
+#     return loss_val
 
 # All Error Function
 def threeshold_percentage(output, target, threeshold_val):
     d1 = torch.exp(output)/torch.exp(target)
     d2 = torch.exp(target)/torch.exp(output)
+    # d1 = output/target
+    # d2 = target/output
     max_d1_d2 = torch.max(d1,d2)
     zero = torch.zeros(output.shape[0], output.shape[1], output.shape[2], output.shape[3])
     one = torch.ones(output.shape[0], output.shape[1], output.shape[2], output.shape[3])
@@ -131,6 +142,8 @@ def threeshold_percentage(output, target, threeshold_val):
 def rmse_linear(output, target):
     actual_output = torch.exp(output)
     actual_target = torch.exp(target)
+    # actual_output = output
+    # actual_target = target
     diff = actual_output - actual_target
     diff2 = torch.pow(diff, 2)
     mse = torch.sum(diff2, (1,2,3))/(output.shape[2] * output.shape[3])
@@ -139,6 +152,7 @@ def rmse_linear(output, target):
 
 def rmse_log(output, target):
     diff = output - target
+    # diff = torch.log(output) - torch.log(target)
     diff2 = torch.pow(diff, 2)
     mse = torch.sum(diff2, (1,2,3))/(output.shape[2] * output.shape[3])
     rmse = torch.sqrt(mse)
@@ -147,6 +161,8 @@ def rmse_log(output, target):
 def abs_relative_difference(output, target):
     actual_output = torch.exp(output)
     actual_target = torch.exp(target)
+    # actual_output = output
+    # actual_target = target
     abs_relative_diff = torch.abs(actual_output - actual_target)/actual_target
     abs_relative_diff = torch.sum(abs_relative_diff, (1,2,3))/(output.shape[2] * output.shape[3])
     return abs_relative_diff.mean()
@@ -154,6 +170,8 @@ def abs_relative_difference(output, target):
 def squared_relative_difference(output, target):
     actual_output = torch.exp(output)
     actual_target = torch.exp(target)
+    # actual_output = output
+    # actual_target = target
     square_relative_diff = torch.pow(torch.abs(actual_output - actual_target), 2)/actual_target
     square_relative_diff = torch.sum(square_relative_diff, (1,2,3))/(output.shape[2] * output.shape[3])
     return square_relative_diff.mean()    
@@ -294,8 +312,8 @@ for epoch in range(1, args.epochs + 1):
     training_loss = train_coarse(epoch)
     coarse_validation(epoch, training_loss)
     model_file = folder_name + "/" + 'coarse_model_' + str(epoch) + '.pth'
-    # if(epoch%10 == 0):
-    #     torch.save(coarse_model.state_dict(), model_file)
+    if(epoch%10 == 0):
+        torch.save(coarse_model.state_dict(), model_file)
 
 coarse_model.eval() # stoping the coarse model to train.
 
@@ -307,5 +325,5 @@ for epoch in range(1, args.epochs + 1):
     training_loss = train_fine(epoch)
     fine_validation(epoch, training_loss)
     model_file = folder_name + "/" + 'fine_model_' + str(epoch) + '.pth'
-    # if(epoch%10 == 0):
-    #     torch.save(fine_model.state_dict(), model_file)
+    if(epoch%5 == 0):
+        torch.save(fine_model.state_dict(), model_file)
