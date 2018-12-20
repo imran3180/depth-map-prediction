@@ -97,4 +97,4 @@ for batch_idx,(data, plot_data) in enumerate(zip(test_loader, input_for_plot_loa
     plt.savefig("new_plots/" + args.model_folder + "_" + str(args.model_no) + "_" + str(batch_idx) + ".jpg")
     plt.show()
     #batch_idx = batch_idx + 1
-    if batch_idx == 1: break
+    # if batch_idx == 1: break

@@ -75,8 +75,8 @@ coarse_model.cuda()
 fine_model.cuda()
 
 # Paper values for SGD
-# coarse_optimizer = optim.SGD([{'params': coarse_model.conv1.parameters(), 'lr': 0.001},{'params': coarse_model.conv2.parameters(), 'lr': 0.001},{'params': coarse_model.conv3.parameters(), 'lr': 0.001},{'params': coarse_model.conv4.parameters(), 'lr': 0.001},{'params': coarse_model.conv5.parameters(), 'lr': 0.001},{'params': coarse_model.fc1.parameters(), 'lr': 0.1},{'params': coarse_model.fc2.parameters(), 'lr': 0.1}], lr = 0.001, momentum = 0.9)
-# fine_optimizer = optim.SGD([{'params': fine_model.conv1.parameters(), 'lr': 0.001},{'params': fine_model.conv2.parameters(), 'lr': 0.01},{'params': fine_model.conv3.parameters(), 'lr': 0.001}], lr = 0.001, momentum = 0.9)
+coarse_optimizer = optim.SGD([{'params': coarse_model.conv1.parameters(), 'lr': 0.001},{'params': coarse_model.conv2.parameters(), 'lr': 0.001},{'params': coarse_model.conv3.parameters(), 'lr': 0.001},{'params': coarse_model.conv4.parameters(), 'lr': 0.001},{'params': coarse_model.conv5.parameters(), 'lr': 0.001},{'params': coarse_model.fc1.parameters(), 'lr': 0.1},{'params': coarse_model.fc2.parameters(), 'lr': 0.1}], lr = 0.001, momentum = 0.9)
+fine_optimizer = optim.SGD([{'params': fine_model.conv1.parameters(), 'lr': 0.001},{'params': fine_model.conv2.parameters(), 'lr': 0.01},{'params': fine_model.conv3.parameters(), 'lr': 0.001}], lr = 0.001, momentum = 0.9)
 
 # Changed values
 # coarse_optimizer = optim.SGD([{'params': coarse_model.conv1.parameters(), 'lr': 0.01},{'params': coarse_model.conv2.parameters(), 'lr': 0.01},{'params': coarse_model.conv3.parameters(), 'lr': 0.01},{'params': coarse_model.conv4.parameters(), 'lr': 0.01},{'params': coarse_model.conv5.parameters(), 'lr': 0.01},{'params': coarse_model.fc1.parameters(), 'lr': 0.1},{'params': coarse_model.fc2.parameters(), 'lr': 0.1}], lr = 0.01, momentum = 0.9)
@@ -94,8 +94,8 @@ fine_model.cuda()
 # coarse_optimizer = optim.Adagrad(coarse_model.parameters(), lr=0.01, lr_decay=0, weight_decay=0, initial_accumulator_value=0)
 # fine_optimizer = optim.Adagrad(fine_model.parameters(), lr=0.01, lr_decay=0, weight_decay=0, initial_accumulator_value=0)
 
-coarse_optimizer = optim.Adam(coarse_model.parameters(), lr=0.01, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
-fine_optimizer = optim.Adam(fine_model.parameters(), lr=0.01, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+# coarse_optimizer = optim.Adam(coarse_model.parameters(), lr=0.01, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+# fine_optimizer = optim.Adam(fine_model.parameters(), lr=0.01, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
 
 # coarse_optimizer = optim.Adamax(coarse_model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
 # fine_optimizer = optim.Adamax(fine_model.parameters(), lr=0.002, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
@@ -108,11 +108,22 @@ dtype=torch.cuda.FloatTensor
 logger = Logger('./logs/' + args.model_folder)
 
 def custom_loss_function(output, target):
+    # di = output - target
     di = target - output
     n = (output_height * output_width)
     di2 = torch.pow(di, 2)
     fisrt_term = torch.sum(di2,(1,2,3))/n
-    second_term = 0.4*torch.pow(torch.sum(di,(1,2,3)), 2)/ (n**2)
+    second_term = 0.5*torch.pow(torch.sum(di,(1,2,3)), 2)/ (n**2)
+    loss = fisrt_term - second_term
+    return loss.mean()
+
+def scale_invariant(output, target):
+    # di = output - target
+    di = target - output
+    n = (output_height * output_width)
+    di2 = torch.pow(di, 2)
+    fisrt_term = torch.sum(di2,(1,2,3))/n
+    second_term = torch.pow(torch.sum(di,(1,2,3)), 2)/ (n**2)
     loss = fisrt_term - second_term
     return loss.mean()
 
@@ -227,6 +238,7 @@ def train_fine(epoch):
 def coarse_validation(epoch, training_loss):
     coarse_model.eval()
     coarse_validation_loss = 0
+    scale_invariant_loss = 0
     delta1_accuracy = 0
     delta2_accuracy = 0
     delta3_accuracy = 0
@@ -241,6 +253,7 @@ def coarse_validation(epoch, training_loss):
         coarse_output = coarse_model(rgb.type(dtype))
         coarse_validation_loss += custom_loss_function(coarse_output, depth).item()
         # all error functions
+        scale_invariant_loss += scale_invariant(coarse_output, depth)
         delta1_accuracy += threeshold_percentage(coarse_output, depth, 1.25)
         delta2_accuracy += threeshold_percentage(coarse_output, depth, 1.25*1.25)
         delta3_accuracy += threeshold_percentage(coarse_output, depth, 1.25*1.25*1.25)
@@ -266,6 +279,7 @@ def coarse_validation(epoch, training_loss):
 def fine_validation(epoch, training_loss):
     fine_model.eval()
     fine_validation_loss = 0
+    scale_invariant_loss = 0
     delta1_accuracy = 0
     delta2_accuracy = 0
     delta3_accuracy = 0
@@ -280,6 +294,7 @@ def fine_validation(epoch, training_loss):
         fine_output = fine_model(rgb.type(dtype), coarse_output.type(dtype))
         fine_validation_loss += custom_loss_function(fine_output, depth).item()
         # all error functions
+        scale_invariant_loss += scale_invariant(fine_output, depth)
         delta1_accuracy += threeshold_percentage(fine_output, depth, 1.25)
         delta2_accuracy += threeshold_percentage(fine_output, depth, 1.25*1.25)
         delta3_accuracy += threeshold_percentage(fine_output, depth, 1.25*1.25*1.25)
@@ -288,6 +303,7 @@ def fine_validation(epoch, training_loss):
         abs_relative_difference_loss += abs_relative_difference(fine_output, depth)
         squared_relative_difference_loss += squared_relative_difference(fine_output, depth)
     fine_validation_loss /= (batch_idx + 1)
+    scale_invariant_loss /= (batch_idx + 1)
     delta1_accuracy /= (batch_idx + 1)
     delta2_accuracy /= (batch_idx + 1)
     delta3_accuracy /= (batch_idx + 1)
@@ -307,6 +323,7 @@ if not os.path.exists(folder_name): os.mkdir(folder_name)
 print("********* Training the Coarse Model **************")
 print("Epochs:     Train_loss  Val_loss    Delta_1     Delta_2     Delta_3    rmse_lin    rmse_log    abs_rel.  square_relative")
 print("Paper Val:                          (0.618)     (0.891)     (0.969)     (0.871)     (0.283)     (0.228)     (0.223)")
+
 for epoch in range(1, args.epochs + 1):
     # print("********* Training the Coarse Model **************")
     training_loss = train_coarse(epoch)
