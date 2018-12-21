@@ -2,74 +2,94 @@ from __future__ import print_function
 import zipfile
 import os
 import pdb
-
 import torchvision.transforms as transforms
+from torch.utils.data import Dataset, DataLoader
+import h5py
+import numpy as np
+from PIL import Image
+import torch.nn as nn
+import torch
+import copy
+
+class TransposeDepthInput(object):
+    def __call__(self, depth):
+        depth = depth.transpose((2, 0, 1))
+        depth = torch.from_numpy(depth)
+        depth = depth.view(1, depth.shape[0], depth.shape[1], depth.shape[2])
+        depth = nn.functional.interpolate(depth, size = (55, 74), mode='bilinear', align_corners=False)
+        depth = torch.log(depth)
+        # depth = (depth - depth.min())/(depth.max() - depth.min())
+        return depth[0]
 
 rgb_data_transforms = transforms.Compose([
     transforms.Resize((228, 304)),    # Different for Input Image & Depth Image
     transforms.ToTensor(),
-    # transforms.Normalize((0.3337, 0.3064, 0.3171), ( 0.2672, 0.2564, 0.2629)) # Calculate this statistics for the training image.
 ])
 
 depth_data_transforms = transforms.Compose([
-    transforms.Resize((55, 74)),    # Different for Input Image & Depth Image
-    transforms.ToTensor(),
-    # transforms.Normalize((0.3337, 0.3064, 0.3171), ( 0.2672, 0.2564, 0.2629)) # Calculate this statistics for the training image.
+    TransposeDepthInput(),
 ])
 
 input_for_plot_transforms = transforms.Compose([
     transforms.Resize((55, 74)),    # Different for Input Image & Depth Image
     transforms.ToTensor(),
-    # transforms.Normalize((0.3337, 0.3064, 0.3171), ( 0.2672, 0.2564, 0.2629)) # Calculate this statistics for the training image.
 ])
 
-def initialize_data(folder):
-    rgb_images = folder + '/rgb'
-    if not os.path.isdir(rgb_images):
-        raise(RuntimeError("Could not found {}/rgb folder".format(folder)))
+class NYUDataset(Dataset):
+    def calculate_mean(self, images):
+        mean_image = np.mean(images, axis=0)
+        return mean_image
 
-    depth_images = folder + '/depth'
-    if not os.path.isdir(depth_images):
-        raise(RuntimeError("Could not found {}/depth folder".format(folder)))
+    def __init__(self, filename, type, rgb_transform = None, depth_transform = None):
+        f = h5py.File(filename, 'r')
+        # images_data = copy.deepcopy(f['images'][0:1449])
+        # depths_data = copy.deepcopy(f['depths'][0:1449])
+        # merged_data = np.concatenate((images_data, depths_data.reshape((1449, 1, 640, 480))), axis=1)
 
-    # Total Image - 1449 (Division: Trainging - 1024, Validation - 256, Testing - 169)
-    dataset_prepared = True
+        # np.random.shuffle(merged_data)
+        # images_data = merged_data[:,0:3,:,:]
+        # depths_data = merged_data[:,3:4,:,:]
 
-    train_folder = folder + '/train_images'
-    if not os.path.isdir(train_folder):
-        dataset_prepared = False
-        os.mkdir(train_folder)
-        os.mkdir(train_folder + '/rgb')
-        os.mkdir(train_folder + '/depth')
+        images_data = f['images'][0:1449]
+        depths_data = f['depths'][0:1449]
 
-    val_folder = folder + '/val_images'
-    if not os.path.isdir(val_folder):
-        os.mkdir(val_folder)
-        os.mkdir(val_folder + '/rgb')
-        os.mkdir(val_folder + '/depth')
+        if type == "training":
+            # self.images = images_data[0:1024]
+            # self.depths = depths_data[0:1024]
+            self.images = images_data[0:1024]
+            self.depths = depths_data[0:1024]
+        elif type == "validation":
+            self.images = images_data[1024:1248]
+            self.depths = depths_data[1024:1248]
+            # self.images = images_data[1024:1072]
+            # self.depths = depths_data[1024:1072]
+        elif type == "test":
+            self.images = images_data[1248:]
+            self.depths = depths_data[1248:]
+            # self.images = images_data[0:32]
+            # self.depths = depths_data[0:32]
+        self.rgb_transform = rgb_transform
+        self.depth_transform = depth_transform
+        self.mean_image = self.calculate_mean(images_data[0:1449])
 
-    test_folder = folder + '/test_images'
-    if not os.path.isdir(test_folder):
-        os.mkdir(test_folder)
-        os.mkdir(test_folder + '/rgb')
-        os.mkdir(test_folder + '/depth')
+    def __len__(self):
+        return len(self.images)
 
-    if not dataset_prepared:
-        for f in os.listdir(rgb_images):
-            image_no = int(f.split(".")[0])
-            if image_no < 1024:
-                dest_folder = train_folder
-            elif image_no < 1280:       # 1024 + 256
-                dest_folder = val_folder
-            else:
-                dest_folder = test_folder
-            os.rename(rgb_images + '/' + f, dest_folder + '/rgb' + '/' + f)
-        for f in os.listdir(depth_images):
-            image_no = int(f.split(".")[0])
-            if image_no < 1024:
-                dest_folder = train_folder
-            elif image_no < 1280:       # 1024 + 256
-                dest_folder = val_folder
-            else:
-                dest_folder = test_folder
-            os.rename(depth_images + '/' + f, dest_folder + '/depth' + '/' + f)
+    def __getitem__(self, idx):
+        image = self.images[idx]
+        # image = (image - self.mean_image)/np.std(image)
+        image = image.transpose((2, 1, 0))
+        # image = (image - image.min())/(image.max() - image.min())
+        # image = image * 255
+        # image = image.astype('uint8')
+        image = Image.fromarray(image)
+        if self.rgb_transform:
+            image = self.rgb_transform(image)
+
+        depth = self.depths[idx]
+        depth = np.reshape(depth, (1, depth.shape[0], depth.shape[1]))
+        depth = depth.transpose((2, 1, 0))
+        if self.depth_transform:
+            depth = self.depth_transform(depth)
+        sample = {'image': image, 'depth': depth}
+        return sample
