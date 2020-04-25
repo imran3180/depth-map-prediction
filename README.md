@@ -1,7 +1,7 @@
 # Depth Map Prediction
 This repository contains pytorch implementation of two reseach work in the area of depth map prediction. This is an unofficial implementation. For more details please refer to the paper.
 
-"**Depth Map Prediction from a Single Image using a Multi-Scale Deep Network**" David Eigen, Christian Puhrsch, Rob Fergus. (2014) [Paper Link](https://arxiv.org/pdf/1406.2283.pdf)
+"**Depth Map Prediction from a Single Image using a Multi-Scale Deep Network**" David Eigen, Christian Puhrsch, Rob Fergus. (2014) [[Paper Link]](https://arxiv.org/pdf/1406.2283.pdf)
 ```
 @article{DBLP:journals/corr/EigenPF14,
   author    = {David Eigen and
@@ -20,7 +20,7 @@ This repository contains pytorch implementation of two reseach work in the area 
   bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 ```
-"**Predicting Depth, Surface Normals and Semantic Labels with a Common Multi-Scale Convolutional Architecture**" David Eigen, Rob Fergus. (2015) [Paper Link](https://arxiv.org/pdf/1411.4734v4.pdf)
+"**Predicting Depth, Surface Normals and Semantic Labels with a Common Multi-Scale Convolutional Architecture**" David Eigen, Rob Fergus. (2015) [[Paper Link]](https://arxiv.org/pdf/1411.4734v4.pdf)
 ```
 @article{DBLP:journals/corr/EigenF14,
   author    = {David Eigen and
@@ -40,6 +40,9 @@ This repository contains pytorch implementation of two reseach work in the area 
 ```
 
 ## Dataset
+#### NYU Depth Dataset V2 [[Dataset Webpage]](https://cs.nyu.edu/~silberman/datasets/nyu_depth_v2.html)
+
+#### KITTI Dataset [[Dataset Webpage]](http://www.cvlibs.net/datasets/kitti/eval_depth_all.php)
 
 ## Architecture
 
