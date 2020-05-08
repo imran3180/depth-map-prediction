@@ -47,6 +47,8 @@ This repository contains pytorch implementation of two reseach work in the area 
 ## Architecture
 
 ## How to use the repository
+* download and process the nyu depth v2 dataset
+- python scripts/nyu_depth_v2.py
 
 ## results
 
