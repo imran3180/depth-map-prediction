@@ -40,15 +40,30 @@ This repository contains pytorch implementation of two reseach work in the area 
 ```
 
 ## Dataset
-#### NYU Depth Dataset V2 [[Dataset Webpage]](https://cs.nyu.edu/~silberman/datasets/nyu_depth_v2.html)
+### NYU Depth Dataset V2 [[Dataset Webpage]](https://cs.nyu.edu/~silberman/datasets/nyu_depth_v2.html)
+There are two modes present for the NYU Depth Dataset V2.
+#### Light
+This methods has divided labeled dataset into 2 parts as training and testing. approximately 10% images of each scene has been included in the test data for the uniformity. The purpose of this Light mode is for fast hypertuning or running the code in less spacious environment. 
+* No of Train image: 1291
+* No of Test image: 158
+
+
+#### Raw
+The training data is prepared using the scripts from the [repository](https://github.com/cogaplex-bts/bts). The test data of this mode is created from official train/test split of the NYU Depth dataset, so it can be used for reporting the accuracies. 
+* No of Train image: 24231
+* No of Test image: 654
+
+
 
 #### KITTI Dataset [[Dataset Webpage]](http://www.cvlibs.net/datasets/kitti/eval_depth_all.php)
 
 ## Architecture
 
 ## How to use the repository
-* download and process the nyu depth v2 dataset
-- python scripts/nyu_depth_v2.py
+```bash
+# prepare the dataset
+python scripts/nyu_depth_v2.py --mode raw
+```
 
 ## results
 
