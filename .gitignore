@@ -2,3 +2,4 @@
 *.mat
 todo.yml
 downloads/
+datasets/nyu_depth_v2
