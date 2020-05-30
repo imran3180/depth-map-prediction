@@ -3,3 +3,4 @@
 todo.yml
 downloads/
 datasets/nyu_depth_v2
+__pycache__/
